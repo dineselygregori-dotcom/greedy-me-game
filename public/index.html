@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
+    <title>CarWil Summoner</title>
+    <style>
+        :root { --bg-dark: #0f0f13; --panel-bg: #1e1e26; --gold: #d4af37; --text-main: #f0f0f0; --mana: #4fc3f7; }
+        body { margin: 0; padding: 0; background-color: var(--bg-dark); color: var(--text-main); font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+        
+        .top-bar { flex: 0 0 10vh; background: #2a2a35; padding: 0 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--gold); font-size: 2vh; z-index: 5;}
+        .stat-badge { background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; border: 1px solid #444; }
+
+        .main-area { flex: 1 1 auto; position: relative; display: flex; justify-content: center; align-items: center; background: #111; overflow: hidden; }
+        .panel { position: absolute; top: 0; bottom: 0; left: 0; right: 0; background: var(--panel-bg); display: none; flex-direction: column; z-index: 10; padding: 10px; }
+        .close-btn { background: #ff5252; color: white; border: none; padding: 8px 18px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 2vh;}
+
+        .home-layout { display: flex; width: 100%; height: 100%; }
+        .equip-panel { width: 30%; background: #1a1a20; border-right: 2px solid var(--gold); padding: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; overflow-y: auto;}
+        .equip-slot { background: #000; border: 1px solid #444; border-radius: 5px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 3vh; color: #555; aspect-ratio: 1; box-sizing: border-box;}
+        .equip-slot.active { color: #fff; background: #2a2a35;}
+        
+        .battle-layout { display: flex; justify-content: space-between; align-items: stretch; width: 100%; height: 100%; padding: 5px; box-sizing: border-box; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #222; padding: 4px; border: 2px solid #555; border-radius: 8px; width: 35vw; max-width: 45vh; aspect-ratio: 1; box-sizing: border-box;}
+        .grid.player-side { border-color: #4fc3f7; }
+        .grid.enemy-side { border-color: #ff5252; }
+        
+        .cell { background: #15151a; border-radius: 4px; position: relative; display: flex; justify-content: center; align-items: center; font-size: 3.5vh; cursor: pointer; box-sizing: border-box; }
+        
+        .middle-hud { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 0 10px; text-align: center; }
+        .battle-log { flex: 1; background: #000; border: 1px solid #444; border-radius: 5px; margin: 10px 0; overflow-y: auto; font-family: monospace; font-size: 1.6vh; padding: 10px; text-align: left; }
+        .potion-bar { display: flex; justify-content: space-around; background: #222; padding: 5px; border-radius: 5px; border: 1px solid #444;}
+        .potion-btn { background: #333; color: #fff; border: 1px solid var(--gold); border-radius: 4px; padding: 8px; font-size: 2vh; cursor: pointer;}
+        
+        /* Fixed Ranks */
+        .entity { position: absolute; top:0; left:0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; flex-direction: column; pointer-events: none; border-radius:4px; box-sizing: border-box; border: 2px solid transparent;}
+        .b-F { outline: 2px solid #ffffff; outline-offset: -2px; }
+        .b-E { outline: 2px solid #4caf50; outline-offset: -2px; box-shadow: inset 0 0 8px #4caf50; }
+        .b-D { outline: 2px solid #2196f3; outline-offset: -2px; box-shadow: inset 0 0 8px #2196f3; }
+        .b-C { outline: 2px solid #9c27b0; outline-offset: -2px; box-shadow: inset 0 0 8px #9c27b0; }
+        .b-B { outline: 2px solid #ffeb3b; outline-offset: -2px; box-shadow: inset 0 0 8px #ffeb3b; }
+        .b-A { outline: 2px solid #ff9800; outline-offset: -2px; box-shadow: inset 0 0 8px #ff9800; }
+        .b-S { outline: 2px solid #f44336; outline-offset: -2px; box-shadow: inset 0 0 10px #f44336; }
+        .b-SS { outline: 2px solid #ff0000; outline-offset: -2px; box-shadow: 0 0 10px #ff0000, inset 0 0 15px #000; }
+        .b-SSS { outline: 2px solid #00e5ff; outline-offset: -2px; box-shadow: 0 0 15px #e0f7fa, inset 0 0 15px #00e5ff; animation: shine 2s infinite; }
+        .b-UR { outline: 2px solid #e040fb; outline-offset: -2px; box-shadow: 0 0 20px #e040fb, inset 0 0 20px #e040fb; animation: shineUR 1s infinite; }
+        .b-Hero { outline: 2px solid var(--gold); outline-offset: -2px; box-shadow: inset 0 0 15px var(--gold); }
+        
+        .c-F { color: #ffffff; } .c-E { color: #4caf50; } .c-D { color: #2196f3; } .c-C { color: #9c27b0; }
+        .c-B { color: #ffeb3b; } .c-A { color: #ff9800; } .c-S { color: #f44336; } 
+        .c-SS { background: linear-gradient(180deg, #ff0000, #550000); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .c-SSS { background: linear-gradient(45deg, #e0f7fa, #00e5ff); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .c-UR { background: linear-gradient(45deg, #e040fb, #ff4081, #e040fb); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight:bold;}
+
+        @keyframes shine { 0%, 100% { filter: drop-shadow(0 0 5px #00e5ff); } 50% { filter: drop-shadow(0 0 15px #ffffff); } }
+        @keyframes shineUR { 0%, 100% { filter: drop-shadow(0 0 8px #e040fb); } 50% { filter: drop-shadow(0 0 20px #ff4081); } }
+
+        .sprite { z-index: 2; font-size: 4vh; transition: transform 0.2s;}
+        .boss { transform: scale(1.6); filter: drop-shadow(0 0 10px #ff5252); }
+        .hp-bar-bg { position: absolute; bottom: 2px; left: 5%; width: 90%; height: 4px; background: #000; z-index: 3; }
+        .hp-bar-fill { height: 100%; background: #81c784; transition: width 0.2s; }
+        .enemy-hp { background: #ff5252; }
+        .rank-badge { position: absolute; top: -2px; left: -2px; font-size: 1.5vh; font-weight: bold; background: rgba(0,0,0,0.8); padding: 2px 5px; border-radius: 3px; z-index: 4; color: #fff;}
+
+        /* Modals & Progress */
+        .modal { position: absolute; top:10%; left:10%; right:10%; bottom:10%; background: #1e1e26; border: 2px solid var(--gold); border-radius: 10px; z-index: 50; display: none; flex-direction: column; padding: 15px; box-shadow: 0 0 30px #000;}
+        .select-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
+        .select-card { background: #111; border: 1px solid #444; border-radius: 5px; padding: 10px; text-align: center; cursor: pointer; }
+        .action-btn { background: var(--gold); color: #000; border: none; padding: 15px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; font-size: 2vh;}
+
+        .progress-bar-bg { width: 100%; height: 12px; background: #000; border-radius: 4px; border: 1px solid #444; margin: 5px 0; overflow: hidden;}
+        .progress-bar-fill { height: 100%; background: #ff5252; width: 0%; transition: width 0.3s; }
+
+        .dmg-text { position: absolute; font-size: 2.5vh; font-weight: bold; text-shadow: 1px 1px 2px #000; z-index: 10; animation: floatUp 0.8s forwards; pointer-events: none; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
+        .anim-lunge { animation: lunge 0.3s ease-in-out; }
+        @keyframes lunge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(15px); } }
+        .anim-lunge-rev { animation: lungeRev 0.3s ease-in-out; }
+        @keyframes lungeRev { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-15px); } }
+        .projectile { position: fixed; font-size: 3vh; z-index: 100; pointer-events: none; transition: all 0.3s linear; transform: translate(-50%, -50%); }
+
+        .bottom-nav { flex: 0 0 12vh; display: grid; grid-template-columns: repeat(4, 1fr); background: #15151b; border-top: 1px solid #333; z-index: 5; }
+        .nav-item { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; background: none; border: none; color: var(--text-main); font-size: 2vh; font-weight: bold; cursor: pointer; }
+        .nav-icon { width: 6vh; height: 6vh; background: #2a2a35; border: 2px solid #555; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 3vh; }
+        .shop-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 10px; overflow-y:auto;}
+        .shop-item { background: #222; border: 1px solid var(--gold); border-radius: 8px; padding: 10px; text-align: center; }
+        .shop-btn { background: var(--gold); color: #000; border: none; padding: 10px; border-radius: 3px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; font-size: 1.8vh;}
+        
+        .crafting-section { background: #15151a; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--mana); display: flex; gap: 10px; overflow-x: auto;}
+        .craft-card { background: #222; border: 1px solid #444; padding: 10px; text-align: center; border-radius: 5px; min-width: 120px;}
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span id="pName" style="color:var(--gold); font-weight:bold;">Hero</span>
+            <span class="stat-badge">Lv. <span id="pLevel">1</span></span>
+            <span class="stat-badge" style="color:#81c784;"><span id="pExp">0</span>/<span id="pMaxExp">100</span> XP</span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span class="stat-badge" style="color:var(--mana);">💧 <span id="pMana">0</span></span>
+            <span class="stat-badge" style="color:var(--gold);">💰 <span id="pGold">0</span></span>
+            <button onclick="openSettings()" style="background:#444; color:#fff; border:none; border-radius:4px; font-size:2.5vh; cursor:pointer; padding:5px 10px;">⚙️</button>
+            <button onclick="toggleFullscreen()" style="background:#444; color:#fff; border:none; border-radius:4px; font-size:2.5vh; cursor:pointer; padding:5px 10px;">🔲</button>
+        </div>
+    </div>
+
+    <div class="main-area">
+        <div class="home-layout" id="homeLayout">
+            <div class="equip-panel" id="equipGrid"></div>
+            <div style="width: 70%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+                <div style="font-size: 12vh;">🏰</div>
+                <h2 style="color:var(--gold); margin:0; font-size:4vh;">Base Camp</h2>
+                <div style="color:#aaa; font-size: 2.5vh; margin-top:10px;">
+                    Total Defense: <span id="statDef" style="color:#81c784;">0</span><br>
+                    Evasion/Agi: <span id="statAgi" style="color:#e040fb;">0%</span><br>
+                    Mana Regen: <span id="statRegen" style="color:var(--mana);">+1/s</span><br>
+                    Summon Limit: <span id="statSummons" style="color:#fff;">2</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="campaignPanel" class="panel">
+            <div style="position:absolute; top:10px; right:10px; display:flex; gap:10px; z-index:20;">
+                <button class="close-btn" id="btnAuto" onclick="toggleAuto()" style="background:#81c784; color:#000;">Auto: ON</button>
+                <button class="close-btn" id="btnPause" onclick="togglePause()" style="background:#ffeb3b; color:#000;">⏸️ Pause</button>
+                <button class="close-btn" id="btnSpeed" onclick="toggleSpeed()" style="background:#4fc3f7; color:#000;">Speed: 1x</button>
+                <button class="close-btn" onclick="closePanels()">Retreat</button>
+            </div>
+            
+            <div class="battle-layout">
+                <div class="grid player-side" id="playerGrid"></div>
+                <div class="middle-hud">
+                    <h3 style="color:#ff5252; margin-top:30px; margin-bottom:0; font-size:3vh;">Stage: <span id="stageNum">1</span></h3>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="stageProgress"></div></div>
+                    <div style="font-size: 1.8vh; color:#aaa;" id="summonLimitTxt">Summons: 0/2</div>
+                    <div class="battle-log" id="battleLog"></div>
+                    <div class="potion-bar">
+                        <button class="potion-btn" onclick="usePotion('hp')">🧪 HP Pot (<span id="hudHpPot">0</span>)</button>
+                        <button class="potion-btn" onclick="usePotion('mana')">🍼 MP Pot (<span id="hudManaPot">0</span>)</button>
+                    </div>
+                </div>
+                <div class="grid enemy-side" id="enemyGrid"></div>
+            </div>
+        </div>
+
+        <div id="unitMenuPanel" class="modal">
+            <div style="display:flex; height:100%;">
+                <div style="flex:1; display:flex; justify-content:center; align-items:center; font-size:12vh; background:#111; border-radius:10px; border:2px solid var(--gold);">
+                    <span id="uMenuSprite">🧙‍♂️</span>
+                </div>
+                <div style="flex:1.5; display:flex; flex-direction:column; padding-left:15px;">
+                    <div style="flex:1;">
+                        <h2 id="uMenuName" style="margin:0 0 5px 0; font-size:3vh;">Monster Name</h2>
+                        <div style="font-size:2vh; color:#aaa; line-height:1.5;">
+                            HP: <span id="uMenuHp" style="color:#81c784;"></span><br>
+                            ATK: <span id="uMenuAtk" style="color:#ff5252;"></span> | DEF: <span id="uMenuDef" style="color:#4fc3f7;"></span><br>
+                            AGI: <span id="uMenuAgi" style="color:#e040fb;"></span>% Dodge<br>
+                            Level: <span id="uMenuLvl"></span> | Rank: <span id="uMenuRank"></span>
+                        </div>
+                    </div>
+                    <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end;">
+                        <button class="action-btn" style="background:#4fc3f7; margin:0;" onclick="actionMove()" id="btnMove">Move</button>
+                        <button class="action-btn" style="background:#ff5252; color:#fff; margin:0;" onclick="actionUnspawn()" id="btnUnspawn">Unspawn</button>
+                        <div style="display:flex; gap:5px; grid-column: span 2;">
+                            <button class="action-btn" id="btnLvlUp" onclick="actionLevelUp()" style="flex:4; margin:0; background:#81c784;">Level Up</button>
+                            <button class="action-btn" id="btnLvlMult" onclick="toggleLvlMult()" style="flex:1; background:#444; color:#fff; margin:0;">x1</button>
+                        </div>
+                        <button class="action-btn" id="btnRankUp" onclick="actionRankUp()" style="grid-column: span 2; margin:0;">Rank Up</button>
+                    </div>
+                </div>
+            </div>
+            <button onclick="closeUnitMenu()" style="position:absolute; top:-15px; right:-15px; background:#ff5252; color:#fff; width:40px; height:40px; border:none; border-radius:50%; font-size:2.5vh; font-weight:bold; cursor:pointer; box-shadow:0 0 10px #000;">X</button>
+        </div>
+
+        <div id="summonSelectPanel" class="modal">
+            <h3 style="color:var(--mana); text-align:center; margin:0 0 10px 0; font-size:3vh;">Select Base Summon</h3>
+            <div class="select-grid" id="summonSelectList"></div>
+            <button onclick="closeSummonSelect()" style="margin-top:10px; background:#444; color:#fff; padding:15px; border:none; border-radius:5px; cursor:pointer; font-size:2vh; font-weight:bold;">Cancel</button>
+        </div>
+
+        <div id="settingsPanel" class="modal" style="left:25%; right:25%; top:20%; bottom:auto;">
+            <h2 style="color: var(--gold); text-align:center; margin-top:0; font-size:3vh;">Settings</h2>
+            <button class="action-btn" onclick="renameHero()">Rename Hero / God Mode</button>
+            <button class="action-btn" style="background:#ff5252; color:#fff; margin-top:20px;" onclick="hardReset()">START NEW GAME (Wipe Save)</button>
+            <button onclick="document.getElementById('settingsPanel').style.display='none'" style="margin-top:10px; background:#444; color:#fff; padding:15px; border:none; border-radius:5px; cursor:pointer; font-size:2vh; font-weight:bold;">Close</button>
+        </div>
+
+        <div id="shopPanel" class="panel">
+            <button class="close-btn" onclick="closePanels()">X</button>
+            <h2 style="color: var(--gold); text-align:center; margin-top:0; font-size:3vh;">Merchant Shop</h2>
+            <div class="shop-grid" id="shopGridRender"></div>
+        </div>
+        
+        <div id="bagPanel" class="panel">
+            <button class="close-btn" onclick="closePanels()">X</button>
+            <h2 style="color: var(--gold); text-align:center; margin-top:0; font-size:3vh;">Scroll Synthesis & Dex</h2>
+            
+            <div class="crafting-section" id="scrollCraftingRender">
+                <!-- Scrolls UI Populated Here -->
+            </div>
+
+            <ul id="monsterList" style="list-style: none; padding: 0; overflow-y: auto; flex-grow: 1; margin:0; display:grid; grid-template-columns:1fr 1fr; gap:5px;"></ul>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-item" onclick="openPanel('bagPanel')"><div class="nav-icon">🎒</div>Dex</button>
+        <button class="nav-item" onclick="openPanel('shopPanel')"><div class="nav-icon" style="border-color:#f9d71c;">🏪</div>Shop</button>
+        <button class="nav-item" onclick="closePanels()"><div class="nav-icon" style="border-color:#b388ff;">🏰</div>Base</button>
+        <button class="nav-item" onclick="openPanel('campaignPanel')"><div class="nav-icon" style="border-color:#ff5252;">⚔️</div>Battle</button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
